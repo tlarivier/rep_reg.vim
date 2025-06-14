@@ -1,0 +1,23 @@
+*rep_reg.txt*  Plugin to edit Vim registers in a buffer
+
+==============================================================================
+REP_REG                                                              *rep_reg*
+
+This plugin allows you to edit Vim registers in a temporary buffer.
+
+Commands:
+
+  :EditRegister {reg}      Opens a scratch buffer for the given register {reg}
+
+Mappings:
+
+  By default, mappings gr{char} (e.g. `gra`) are set to open the register.
+
+  You can customize the prefix:
+      > let g:rep_reg_map_prefix = '<leader>r'
+
+License: Vim license (see :help license)
+
+==============================================================================
+" vim:tw=78:ts=8:ft=help:norl:
+
