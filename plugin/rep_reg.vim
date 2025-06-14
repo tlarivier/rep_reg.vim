@@ -4,13 +4,14 @@ endif
 let g:loaded_rep_reg = 1
 
 command! -nargs=1 EditRegister call rep_reg#edit(<f-args>)
+" command! -nargs=1 -complete=customlist,rep_reg#complete EditRegister call rep_reg#edit(<f-args>) " pour plus tard
 
 augroup RegisterEditor
   autocmd!
   autocmd BufWriteCmd __register_*__ call rep_reg#save()
 augroup END
 
-let s:special_registers = get(g:, 'rep_reg_extra_registers', ['*', '+', '"', '_', '#', '%', '0'])
+let s:special_registers = get(g:, 'rep_reg_extra_registers', ['*', '+', '"', '_', '#', '%', '-', '.', ':'])
 
 if get(g:, 'rep_reg_enable_mappings', 1)
   if !exists('g:rep_reg_map_prefix')

@@ -31,10 +31,11 @@ You’re done !
 
 ## Configuration
 
-| Option                      | Default | Description                            |
-| --------------------------- | ------- | -------------------------------------- |
-| `g:rep_reg_map_prefix`      | `'gr'`  | Mapping prefix for `gr{char}` bindings |
-| `g:rep_reg_enable_mappings` | `1`     | Set to `0` to disable default mappings |
+| Option                      | Default     | Description                            |
+| --------------------------- | ----------- | -------------------------------------- |
+| `g:rep_reg_map_prefix`      | `'gr'`      | Mapping prefix for `gr{char}` bindings |
+| `g:rep_reg_enable_mappings` | `1`         | Set to `0` to disable default mappings |
+| `g:rep_reg_split`           | `'vertical'`| Split style: `'horizontal'`, `'tab'`   |
 
 ## Usage
 
