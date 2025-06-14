@@ -47,3 +47,9 @@ function! rep_reg#save() abort
     echoerr 'rep_reg#save: No target register set.'
   endif
 endfunction
+
+function! rep_reg#complete(A, L, P) abort
+  let l:registers = split('abcdefghijklmnopqrstuvwxyz0123456789"+-*._#%:', '\zs')
+  return filter(l:registers, { _, val -> val =~ '^' . a:A })
+endfunction
+

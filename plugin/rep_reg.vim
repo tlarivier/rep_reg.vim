@@ -3,8 +3,7 @@ if exists('g:loaded_rep_reg')
 endif
 let g:loaded_rep_reg = 1
 
-command! -nargs=1 EditRegister call rep_reg#edit(<f-args>)
-" command! -nargs=1 -complete=customlist,rep_reg#complete EditRegister call rep_reg#edit(<f-args>) " pour plus tard
+command! -nargs=1 -complete=customlist,rep_reg#complete EditRegister call rep_reg#edit(<f-args>)
 
 augroup RegisterEditor
   autocmd!
