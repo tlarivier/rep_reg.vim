@@ -5,7 +5,6 @@ function! rep_reg#edit(reg) abort
   endif
 
   let valid = split('abcdefghijklmnopqrstuvwxyz0123456789"+-*._#%:', '\zs')
-
   if index(valid, a:reg) == -1
     echoerr 'EditRegister: Invalid register "' . a:reg . '"'
     return
@@ -14,7 +13,7 @@ function! rep_reg#edit(reg) abort
   let l:bufname = '__register_' . a:reg . '__'
 
   for bufnr in range(1, bufnr('$'))
-    if bufexists(bufnr) && bufname(bufnr) == l:bufname
+    if bufexists(bufnr) && bufname(bufnr) ==# l:bufname
       execute 'buffer ' . bufnr
       return
     endif
@@ -22,11 +21,11 @@ function! rep_reg#edit(reg) abort
 
   let l:split = get(g:, 'rep_reg_split', 'vertical')
   if l:split ==# 'horizontal'
-    split
+    split | enew
   elseif l:split ==# 'tab'
-    tabnew
+    tabnew | enew
   else
-    vertical new
+    vertical new | enew
   endif
 
   execute 'file ' . l:bufname
