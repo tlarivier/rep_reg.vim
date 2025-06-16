@@ -32,7 +32,8 @@ function! rep_reg#get_mappable_registers() abort
   return regs
 endfunction
 
-function! rep_reg#edit(reg) abort
+function! rep_reg#edit(reg, ...) abort
+  let force_reload = a:0 > 0 ? a:1 : 0
   if strlen(a:reg) != 1 || index(s:valid_registers, a:reg) == -1
     echoerr 'EditRegister: Invalid register'
     return
@@ -52,7 +53,7 @@ function! rep_reg#edit(reg) abort
     endif
   endfor
 
-  if existing_buf != -1
+  if existing_buf != -1 && !force_reload
     if getbufvar(existing_buf, '&modified')
       let choice = confirm('Register "'.a:reg.'" buffer modified. Reload anyway?', "&Yes\n&No\n&Cancel", 2)
       if choice == 1
@@ -77,16 +78,29 @@ function! rep_reg#edit(reg) abort
   execute l:cmd . ' | enew'
 
   execute 'file [rep_reg:' . a:reg . ']'
-  setlocal buftype=acwrite bufhidden=wipe noswapfile nobuflisted
+  setlocal buftype=acwrite bufhidden=wipe noswapfile
+  if !get(g:, 'rep_reg_buflisted', 1)
+    setlocal nobuflisted
+  endif
   setlocal filetype=rep_reg
-  let l:reg_content = getreg(a:reg, 1, 1)
+
+  let l:reg_content = []
+  try
+    let l:reg_content = getreg(a:reg, 1, 1)
+  catch /^Vim\%((\a\+)\)\=:E/ " catch getreg() error
+    echohl ErrorMsg
+    echomsg 'Cannot read register "' . a:reg . '": ' . v:exception
+    echohl None
+    return
+  endtry
+
   if empty(l:reg_content)
     let l:reg_content = ['']
   endif
 
   if readonly
-    call setline(1, ["[readonly] " . get(s:register_hints, a:reg, 'Register is not editable'), ''] + l:reg_content)
-    setlocal nomodifiable
+    call setline(1, l:reg_content)
+    setlocal nomodifiable readonly
   else
     call setline(1, l:reg_content)
   endif
@@ -95,13 +109,33 @@ function! rep_reg#edit(reg) abort
   let b:rep_reg_readonly = readonly
 
   augroup rep_reg_autocmds
-    autocmd!
+    autocmd! * <buffer>
     autocmd BufWriteCmd <buffer> call rep_reg#save()
-    autocmd BufUnload,BufLeave <buffer> call rep_reg#check_modified_on_unload()
+    autocmd BufUnload,BufDelete,QuitPre <buffer> call rep_reg#check_modified_on_unload()
+    autocmd BufDelete <buffer> unlet! b:rep_reg_target b:rep_reg_readonly
   augroup END
 
   setlocal nomodified
   redraw | echo 'Editing register "' . a:reg . '"'
+endfunction
+
+function! rep_reg#list_buffers() abort
+  echomsg 'Open rep_reg buffers:'
+  for buf in getbufinfo({'bufloaded': 1})
+    if has_key(buf.variables, 'rep_reg_target')
+      echom '- ' . buf.name . ' => "' . getreg(buf.variables.rep_reg_target) . '"'
+    endif
+  endfor
+endfunction
+
+function! rep_reg#list() abort
+  let results = []
+  for buf in getbufinfo({'bufloaded': 1})
+    if has_key(buf.variables, 'rep_reg_target')
+      call add(results, {'bufnr': buf.bufnr, 'reg': buf.variables.rep_reg_target, 'content': getreg(buf.variables.rep_reg_target)})
+    endif
+  endfor
+  return results
 endfunction
 
 function! rep_reg#save() abort
@@ -123,13 +157,13 @@ function! rep_reg#save() abort
 endfunction
 
 function! rep_reg#check_modified_on_unload() abort
-  if &modified && exists('b:rep_reg_target')
-    let l:msg = 'Register "' . b:rep_reg_target . '" has unsaved changes. Save?'
-    let l:choice = confirm(l:msg, "&Yes\n&No\n&Cancel", 1)
-    if l:choice == 1
+  if exists('b:rep_reg_target') && &modified
+    if get(g:, 'rep_reg_save_on_leave', 0)
       call rep_reg#save()
-    elseif l:choice == 3
-      setlocal nomodified
+    else
+      echohl WarningMsg
+      echomsg 'Register "' . b:rep_reg_target . '" has unsaved changes.'
+      echohl None
     endif
   endif
 endfunction
