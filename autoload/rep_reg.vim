@@ -1,6 +1,6 @@
 let s:default_special = ['*', '+', '"', '_', '#', '%', '-', '.', ':']
 let s:valid_registers = split('abcdefghijklmnopqrstuvwxyz0123456789"+-*._#%:', '\zs')
-let s:readonly_registers = ['=', ':', '/', '"', '(', ')']
+let s:readonly_registers = ['=', ':', '/']
 
 function! rep_reg#init() abort
   if get(g:, 'rep_reg_enable_mappings', 1)
@@ -31,10 +31,27 @@ function! rep_reg#check_modified_on_unload() abort
     if l:choice == 1
       call rep_reg#save()
     elseif l:choice == 3
-      execute 'bdelete!'
+      setlocal nomodified
       return
     endif
   endif
+endfunction
+
+function! rep_reg#get(reg) abort
+  if strlen(a:reg) != 1 || index(s:valid_registers, a:reg) == -1
+    throw 'rep_reg#get: invalid register'
+  endif
+  return getreg(a:reg, 1, 1)
+endfunction
+
+function! rep_reg#set(reg, lines) abort
+  if strlen(a:reg) != 1 || index(s:valid_registers, a:reg) == -1
+    throw 'rep_reg#set: invalid register'
+  endif
+  if type(a:lines) != type([])
+    throw 'rep_reg#set: lines must be a List of strings'
+  endif
+  call setreg(a:reg, a:lines)
 endfunction
 
 function! s:is_editable_register(reg) abort
@@ -72,6 +89,7 @@ function! rep_reg#edit(reg) abort
 
   execute 'file [rep_reg:' . a:reg . ']'
   setlocal buftype=acwrite bufhidden=wipe noswapfile nobuflisted
+  setlocal filetype=rep_reg
   let l:reg_content = getreg(a:reg, 1, 1)
   if empty(l:reg_content)
     let l:reg_content = ['']
@@ -80,15 +98,13 @@ function! rep_reg#edit(reg) abort
 
   let b:rep_reg_target = a:reg
 
-  augroup rep_reg_bufwrite
+  augroup rep_reg_autocmds
     autocmd!
     autocmd BufWriteCmd <buffer> call rep_reg#save()
     autocmd BufUnload <buffer> call rep_reg#check_modified_on_unload()
   augroup END
 
-  setlocal filetype=rep_reg
   setlocal nomodified
-
   redraw | echo 'Editing register "' . a:reg . '"'
 endfunction
 
