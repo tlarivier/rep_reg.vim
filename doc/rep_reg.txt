@@ -1,0 +1,337 @@
+*rep_reg.txt*	Vim Register Editor	*rep_reg* 		*rep-reg*
+
+================================================================================
+CONTENTS							*rep_reg-contents*
+
+1. Introduction			|rep_reg-introduction|
+2. Quick Start			|rep_reg-quickstart|
+3. Commands			|rep_reg-commands|
+4. Mappings			|rep_reg-mappings|
+5. Configuration		|rep_reg-configuration|
+6. API				|rep_reg-api|
+7. Hooks			|rep_reg-hooks|
+8. Features			|rep_reg-features|
+9. Troubleshooting		|rep_reg-troubleshooting|
+10. License			|rep_reg-license|
+
+================================================================================
+INTRODUCTION						*rep_reg-introduction*
+
+rep_reg.vim 
+
+"Simplicity is the ultimate sophistication" - Leonardo da Vinci
+
+This plugin does ONLY ONE thing: edit Vim registers in buffers.
+No bloat, no complexity, just pure register editing.
+
+Philosophy:
+• Zero global state pollution
+• Built-in Vim architecure
+• Native register type preservation
+• Automatic mapping generation
+• Cross-platform compatibility
+• Minimal memory footprint
+
+================================================================================
+QUICK START						*rep_reg-quickstart*
+
+Install and start using immediately:
+
+1. Basic usage:
+>
+	:EditRegister a		" Open register 'a' for editing
+	gra			" Same thing with mapping
+	<edit content>
+	:w			" Save to register (or :RegSave)
+<
+
+2. All registers supported:
+>
+	:EditRegister +		" Clipboard
+	:EditRegister 0		" Yank register
+	:EditRegister /		" Search register (readonly)
+	gr+	gr0	gr/		" Quick mappings
+<
+
+3. List open buffers:
+>
+	:RepRegList		" Show all register buffers
+	grl			" Quick mapping
+<
+
+================================================================================
+COMMANDS						*rep_reg-commands*
+
+							*:EditRegister*
+:EditRegister {register}
+	Open the specified register for editing in a buffer.
+	Supports ALL Vim registers:
+	• Letters: a-z
+	• Numbers: 0-9
+	• Special: " + * / : . % #
+	
+	Examples:
+	:EditRegister a		" Named register
+	:EditRegister +		" Clipboard
+	:EditRegister 0		" Last yank
+	:EditRegister /		" Search pattern
+
+							*:RepRegList*
+:RepRegList
+	Show a list of all currently open register buffers.
+	Displays buffer name, register, and modification status.
+
+							*:RegSave*
+:RegSave
+	Save the current register buffer (buffer-local command).
+	Note: `:w` also works and automatically calls this.
+
+================================================================================
+MAPPINGS						*rep_reg-mappings*
+
+AUTOMATIC MAPPING GENERATION
+
+The plugin automatically creates 41 mappings following the pattern:
+{prefix}{register}
+
+Default prefix: `gr` (customizable with |g:rep_reg_map_prefix|)
+
+Generated mappings:
+• Letter registers (26):	gra grb grc ... grz
+• Number registers (10):	gr0 gr1 gr2 ... gr9
+• Special registers (5):	gr" gr+ gr* gr/ gr:
+• List command (1):		grl (:RepRegList)
+
+Total: 44 mappings for complete register coverage!
+
+Buffer-local mappings (active in register buffers):
+  <C-S>				Save register (:RegSave)
+
+Disable default mappings:
+>
+	let g:rep_reg_no_default_mappings = 1
+<
+
+Custom prefix:
+>
+	let g:rep_reg_map_prefix = '<Leader>r'
+	" Creates <Leader>ra, <Leader>rb, etc.
+<
+
+================================================================================
+CONFIGURATION						*rep_reg-configuration*
+
+						*g:rep_reg_no_default_mappings*
+Disable all default mappings:
+>
+	let g:rep_reg_no_default_mappings = 1
+<
+
+						*g:rep_reg_map_prefix*
+Customize mapping prefix (default: 'gr'):
+>
+	let g:rep_reg_map_prefix = '<Leader>r'
+	let g:rep_reg_map_prefix = ',r'
+<
+
+						*g:rep_reg_config*
+Global configuration dictionary:
+>
+	let g:rep_reg_config = {
+	  \ 'split_command': 'vsplit',
+	  \ 'confirm_readonly': 0,
+	  \ 'filetype': 'text'
+	  \ }
+<
+
+Configuration options:
+
+  split_command		How to open register buffers
+  			'split' (default), 'vsplit', 'edit', 'tabnew'
+  
+  confirm_readonly	Show warnings for readonly registers
+  			1 (default, show warnings), 0 (silent)
+  
+  filetype		Filetype for register buffers
+  			'rep_reg' (default), 'text', 'vim', etc.
+  			Affects syntax highlighting
+
+================================================================================
+API							*rep_reg-api*
+
+Public functions for scripting and automation:
+
+						*rep_reg#edit()*
+rep_reg#edit({register})
+	Open a register for editing. Same as :EditRegister.
+	
+	Example:
+	:call rep_reg#edit('a')
+	:call rep_reg#edit('+')
+
+						*rep_reg#save()*
+rep_reg#save()
+	Save current register buffer. Must be called from register buffer.
+	Returns 1 on success, 0 on failure.
+
+						*rep_reg#buffers()*
+rep_reg#buffers()
+	Return list of register buffer info (for scripting).
+	Each item contains: bufnr, name, register, readonly, modified
+	
+	Example:
+	for buf in rep_reg#buffers()
+	  echo buf.register . ': ' . (buf.modified ? 'modified' : 'clean')
+	endfor
+
+						*rep_reg#show_buffers()*
+rep_reg#show_buffers()
+	Display user-friendly list of register buffers. Same as :RepRegList.
+
+						*rep_reg#complete()*
+rep_reg#complete({ArgLead}, {CmdLine}, {CursorPos})
+	Completion function for :EditRegister command.
+	Automatically provides all valid register names.
+
+Buffer-local variables (available in register buffers):
+
+  b:rep_reg_target		Target register name ('a', '+', etc.)
+  b:rep_reg_original_type	Original register type (preserved on save)
+  b:rep_reg_readonly		1 if register is readonly, 0 otherwise
+
+================================================================================
+HOOKS							*rep_reg-hooks*
+
+Simple function-based hooks for customization. Define these functions to
+extend behavior:
+
+						*RepRegPreEdit()*
+RepRegPreEdit({context})
+	Called before a register is opened for editing.
+	Return 0 to abort, 1 to continue.
+
+						*RepRegPostEdit()*
+RepRegPostEdit({context})
+	Called after register buffer is created and populated.
+
+						*RepRegPreSave()*
+RepRegPreSave({context})
+	Called before saving register content.
+	Return 0 to abort save, 1 to continue.
+
+						*RepRegPostSave()*
+RepRegPostSave({context})
+	Called after successful save operation.
+
+Context dictionary contains:
+  register		Register name ('a', '+', etc.)
+  content		Register content (string)
+  type			Register type ('v', 'V', '^V')
+  bufnr			Buffer number
+  readonly		1 if readonly, 0 otherwise
+
+Hook examples:
+>
+	" Log all register edits
+	function! RepRegPostEdit(context)
+	  echo "Editing register '" . a:context.register . "'"
+	endfunction
+	
+	" Confirm before saving important registers
+	function! RepRegPreSave(context)
+	  if a:context.register ==# '+'
+	    return confirm('Save to clipboard?', "&Yes\n&No") == 1
+	  endif
+	  return 1
+	endfunction
+<
+
+================================================================================
+FEATURES						*rep_reg-features*
+
+CORE FEATURES:
+• Edit ANY Vim register (a-z, 0-9, ", +, *, /, :)
+• Automatic register type preservation (character/line/block-wise)
+• Save with `:w` or `:RegSave` - both work seamlessly
+• 41 automatic mappings for instant access
+• Readonly register detection with warnings
+• Cross-platform compatible buffer names
+
+QUALITY FEATURES:
+• Zero global state pollution - clean architecture
+• Built-in Vim quality error handling (E1234, E1235, E1236)
+• No buffer pollution - proper cleanup
+• Smart window management
+• Hook system for extensibility
+• Tab completion for register names
+• Minimal memory footprint
+
+USER EXPERIENCE:
+• Buffers are NOT marked as modified when created
+• Clean buffer names: [Register a], [Register clipboard]
+• Immediate feedback on operations
+• Consistent with Vim conventions
+• No unnecessary complexity
+
+================================================================================
+TROUBLESHOOTING						*rep_reg-troubleshooting*
+
+COMMON ISSUES:
+
+E1234: Invalid register name ~
+• Cause: Using invalid register character
+• Solution: Use valid registers (a-z, 0-9, ", +, *, /, :)
+• Example: ':EditRegister &' → invalid, use ':EditRegister a'
+
+E1235: Register not accessible ~
+• Cause: Register doesn't exist or clipboard unavailable
+• Solution: Check if clipboard support is compiled in (:echo has('clipboard'))
+
+E676: No matching autocommands for buftype=acwrite ~
+• Cause: Old version of plugin
+• Solution: Update to latest version - this issue was fixed
+
+Mapping conflicts with 'gr' prefix ~
+• Cause: Another plugin uses 'gr' mappings
+• Solution 1: Disable defaults: let g:rep_reg_no_default_mappings = 1
+• Solution 2: Change prefix: let g:rep_reg_map_prefix = '<Leader>r'
+
+Buffer shows as modified immediately ~
+• Cause: Old version of plugin 
+• Solution: Update to latest version - buffers are correctly marked clean
+
+Readonly registers can't be saved ~
+• Expected behavior: Registers :, /, ., %, # are readonly in Vim
+• Solution: These can be viewed but not modified
+
+Clipboard registers don't work ~
+• Cause: Vim compiled without clipboard support
+• Check: :echo has('clipboard') (should return 1)
+• Solution: Install Vim with clipboard support or use gvim
+
+DEBUGGING:
+
+Check plugin loading:
+:echo exists('g:loaded_rep_reg')
+" Should return 1
+
+Check mappings:
+:nmap gr
+" Should show all gr* mappings
+
+Check register buffer variables:
+" In a register buffer:
+:echo b:rep_reg_target
+:echo b:rep_reg_readonly
+
+================================================================================
+LICENSE							*rep_reg-license*
+
+MIT License
+
+Copyright (c) 2024 rep_reg.vim contributors
+
+Same as vim.
+
+================================================================================
+ vim:tw=78:ts=8:ft=help:norl:
