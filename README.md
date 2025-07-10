@@ -1,4 +1,4 @@
-# rep_reg.vim - The Enlightened Way
+# rep_reg.vim 
 
 > *"Simplicity is the ultimate sophistication."* - Leonardo da Vinci
 
